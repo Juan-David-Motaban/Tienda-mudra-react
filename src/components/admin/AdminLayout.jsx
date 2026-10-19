@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ExternalLink, LayoutDashboard, LogIn, LogOut, Menu, Package,
-  ReceiptText, ShieldAlert, Store, Users, X, ArrowLeft
+  BarChart3, ReceiptText, ShieldAlert, Store, Tags, UserCircle, Users, X, ArrowLeft
 } from "lucide-react";
 import { useTienda } from "../../context/TiendaContext";
 import estiloAdmin from "../../styles/admin.css?inline";
@@ -11,21 +11,21 @@ import { AdminContext } from "./AdminContext";
 import { EnlaceAdmin } from "./ui";
 
 // Rutas que un Vendedor puede ver (solo lectura de productos y órdenes).
-const RUTA_VENDEDOR = /^\/admin\/(productos(\/(?!nuevo$)[^/]+)?|ordenes(\/[^/]+)?)$/;
+const RUTA_VENDEDOR = /^\/admin\/(productos(\/(?!nuevo$)[^/]+)?|ordenes(\/[^/]+)?|perfil)$/;
 
 function Marca({ sesion }) {
   const destino = sesion?.rol === "Vendedor" ? "/admin/productos" : "/admin";
   return (
-    <Link className="admin-marca" to={destino}>
-      <span className="admin-marca__simbolo"><Store aria-hidden="true" /></span>
-      <span><strong>Mudra</strong><small>ADMINISTRACIÓN</small></span>
-    </Link>
+      <Link className="admin-marca" to={destino}>
+        <span className="admin-marca__simbolo"><Store aria-hidden="true" /></span>
+        <span><strong>Mudra</strong><small>ADMINISTRACIÓN</small></span>
+      </Link>
   );
 }
 
 export default function AdminLayout() {
   useHojaEstilos(estiloAdmin);
-  const { sesion, hayAdministrador, cerrarSesion, eliminarProducto, eliminarUsuario, productos, usuarios } = useTienda();
+  const { sesion, hayAdministrador, cerrarSesion, eliminarProducto, eliminarUsuario, eliminarCategoria, productos, usuarios, categorias } = useTienda();
   const { pathname, state } = useLocation();
   const navegar = useNavigate();
 
@@ -91,8 +91,10 @@ export default function AdminLayout() {
   }, [pendiente]);
 
   const registroPendiente = pendiente && (pendiente.tipo === "producto"
-    ? productos.find((p) => p.id === pendiente.id)
-    : usuarios.find((u) => u.run === pendiente.id));
+      ? productos.find((p) => p.id === pendiente.id)
+      : pendiente.tipo === "categoría"
+          ? categorias.find((c) => c.id === pendiente.id)
+          : usuarios.find((u) => u.run === pendiente.id));
 
   const cerrarDialogo = () => dialogo.current?.close();
   const alCerrarDialogo = () => {
@@ -104,6 +106,7 @@ export default function AdminLayout() {
     if (!pendiente) return;
     try {
       if (pendiente.tipo === "producto") eliminarProducto(pendiente.id);
+      else if (pendiente.tipo === "categoría") eliminarCategoria(pendiente.id);
       else eliminarUsuario(pendiente.id);
       cerrarDialogo();
       notificar("El registro se eliminó correctamente.");
@@ -121,17 +124,17 @@ export default function AdminLayout() {
 
   if (configurando) {
     return (
-      <AdminContext.Provider value={contexto}>
-        <main className="admin-inicial" id="admin-contenido">
-          <Marca sesion={null} />
-          <div className="encabezado-pagina">
-            <div><h1>Configurar administración</h1><p>Crea la primera cuenta administradora de Tienda Mudra.</p></div>
-            <div className="encabezado-acciones" />
-          </div>
-          <div id="aviso-admin" className={`aviso aviso--${aviso?.tipo || "exito"}`} role="status" hidden={!aviso}>{aviso?.texto}</div>
-          <div id="admin-vista"><Outlet /></div>
-        </main>
-      </AdminContext.Provider>
+        <AdminContext.Provider value={contexto}>
+          <main className="admin-inicial" id="admin-contenido">
+            <Marca sesion={null} />
+            <div className="encabezado-pagina">
+              <div><h1>Configurar administración</h1><p>Crea la primera cuenta administradora de Tienda Mudra.</p></div>
+              <div className="encabezado-acciones" />
+            </div>
+            <div id="aviso-admin" className={`aviso aviso--${aviso?.tipo || "exito"}`} role="status" hidden={!aviso}>{aviso?.texto}</div>
+            <div id="admin-vista"><Outlet /></div>
+          </main>
+        </AdminContext.Provider>
     );
   }
 
@@ -140,85 +143,88 @@ export default function AdminLayout() {
   const permitido = sesion.rol === "Administrador" || (sesion.rol === "Vendedor" && RUTA_VENDEDOR.test(pathname.replace(/\/$/, "")));
   if (!permitido) {
     return (
-      <main className="admin-bloqueo" id="admin-contenido">
-        <ShieldAlert aria-hidden="true" />
-        <h1>Acceso restringido</h1>
-        <p>Tu perfil no tiene acceso a esta sección.</p>
-        <EnlaceAdmin to={sesion.rol === "Vendedor" ? "/admin/productos" : "/"} icono={ArrowLeft}>
-          {sesion.rol === "Vendedor" ? "Ver productos" : "Volver a la tienda"}
-        </EnlaceAdmin>{" "}
-        <EnlaceAdmin to="/admin/login" icono={LogIn}>Ingresar con otra cuenta</EnlaceAdmin>
-      </main>
+        <main className="admin-bloqueo" id="admin-contenido">
+          <ShieldAlert aria-hidden="true" />
+          <h1>Acceso restringido</h1>
+          <p>Tu perfil no tiene acceso a esta sección.</p>
+          <EnlaceAdmin to={sesion.rol === "Vendedor" ? "/admin/productos" : "/"} icono={ArrowLeft}>
+            {sesion.rol === "Vendedor" ? "Ver productos" : "Volver a la tienda"}
+          </EnlaceAdmin>{" "}
+          <EnlaceAdmin to="/admin/login" icono={LogIn}>Ingresar con otra cuenta</EnlaceAdmin>
+        </main>
     );
   }
 
   const admin = sesion.rol === "Administrador";
   const seccion = pathname.startsWith("/admin/productos") ? "productos"
-    : pathname.startsWith("/admin/usuarios") ? "usuarios"
-    : pathname.startsWith("/admin/ordenes") ? "ordenes" : "inicio";
+      : pathname.startsWith("/admin/categorias") ? "categorias"
+          : pathname.startsWith("/admin/usuarios") ? "usuarios"
+              : pathname.startsWith("/admin/reportes") ? "reportes"
+                  : pathname.startsWith("/admin/perfil") ? "perfil"
+                      : pathname.startsWith("/admin/ordenes") ? "ordenes" : "inicio";
   const entradas = [
     ...(admin ? [["inicio", "/admin", "Resumen", LayoutDashboard]] : []),
     ["productos", "/admin/productos", "Productos", Package],
+    ...(admin ? [["categorias", "/admin/categorias", "Categorías", Tags]] : []),
     ["ordenes", "/admin/ordenes", "Órdenes", ReceiptText],
-    ...(admin ? [["usuarios", "/admin/usuarios", "Usuarios", Users]] : [])
+    ...(admin ? [["usuarios", "/admin/usuarios", "Usuarios", Users], ["reportes", "/admin/reportes", "Reportes", BarChart3]] : []),
+    ["perfil", "/admin/perfil", "Perfil", UserCircle]
   ];
 
   return (
-    <AdminContext.Provider value={contexto}>
-      <a className="saltar-contenido" href="#admin-contenido">Saltar al contenido</a>
-      <div id="admin-root">
-        <button className="sidebar-fondo" tabIndex={-1} aria-label="Cerrar menú" onClick={() => setSidebarAbierta(false)} />
-        <aside className="admin-sidebar" id="admin-sidebar" aria-label="Menú administrativo">
-          <Marca sesion={sesion} />
-          <button ref={cerrarSidebarRef} className="boton-icono sidebar-cerrar" aria-label="Cerrar menú" onClick={() => { setSidebarAbierta(false); menuRef.current?.focus(); }}>
-            <X aria-hidden="true" />
-          </button>
-          <div className="sidebar-seccion">Gestión de tienda</div>
-          <nav className="admin-nav" aria-label="Administración">
-            {entradas.map(([id, url, texto, Icono]) => (
-              <Link key={id} to={url} aria-current={seccion === id ? "page" : undefined}><Icono aria-hidden="true" />{texto}</Link>
-            ))}
-          </nav>
-          <div className="sidebar-pie">
-            <Link to="/"><ExternalLink aria-hidden="true" />Ver tienda</Link>
-            <button type="button" onClick={() => { cerrarSesion(); navegar("/admin/login"); }}>
-              <LogOut aria-hidden="true" />Cerrar sesión
+      <AdminContext.Provider value={contexto}>
+        <a className="saltar-contenido" href="#admin-contenido">Saltar al contenido</a>
+        <div id="admin-root">
+          <button className="sidebar-fondo" tabIndex={-1} aria-label="Cerrar menú" onClick={() => setSidebarAbierta(false)} />
+          <aside className="admin-sidebar" id="admin-sidebar" aria-label="Menú administrativo">
+            <Marca sesion={sesion} />
+            <button ref={cerrarSidebarRef} className="boton-icono sidebar-cerrar" aria-label="Cerrar menú" onClick={() => { setSidebarAbierta(false); menuRef.current?.focus(); }}>
+              <X aria-hidden="true" />
             </button>
-          </div>
-        </aside>
-
-        <div className="admin-area" ref={areaRef}>
-          <header className="admin-topbar">
-            <div className="admin-topbar__titulo">
-              <button ref={menuRef} className="boton-icono menu-abrir" type="button" aria-controls="admin-sidebar" aria-expanded={sidebarAbierta} aria-label="Abrir menú" onClick={() => setSidebarAbierta(true)}>
-                <Menu aria-hidden="true" />
+            <div className="sidebar-seccion">Gestión de tienda</div>
+            <nav className="admin-nav" aria-label="Administración">
+              {entradas.map(([id, url, texto, Icono]) => (
+                  <Link key={id} to={url} aria-current={seccion === id ? "page" : undefined}><Icono aria-hidden="true" />{texto}</Link>
+              ))}
+            </nav>
+            <div className="sidebar-pie">
+              <Link to="/"><ExternalLink aria-hidden="true" />Ver tienda</Link>
+              <button type="button" onClick={() => { cerrarSesion(); navegar("/admin/login"); }}>
+                <LogOut aria-hidden="true" />Cerrar sesión
               </button>
-              <span>Tienda Mudra / {titulo}</span>
             </div>
-            <div className="admin-identidad">
-              <span className="avatar">{(sesion.nombre || "M").slice(0, 1).toUpperCase()}</span>
-              <div><strong>{sesion.nombre}</strong><small>{sesion.rol}</small></div>
-            </div>
-          </header>
-          <main className="admin-contenido" id="admin-contenido">
-            <div id="aviso-admin" className={`aviso aviso--${aviso?.tipo || "exito"}`} role="status" hidden={!aviso}>{aviso?.texto}</div>
-            <div id="admin-vista"><Outlet /></div>
-          </main>
-        </div>
+          </aside>
 
-        <dialog ref={dialogo} id="confirmar-eliminacion" aria-labelledby="titulo-eliminacion" onClose={alCerrarDialogo}>
-          <h2 id="titulo-eliminacion">Eliminar {pendiente?.tipo}</h2>
-          <p id="texto-eliminacion">
-            {registroPendiente ? `Se eliminará "${registroPendiente.nombre}". Esta acción no se puede deshacer. Las órdenes anteriores conservarán sus datos.` : ""}
-          </p>
-          <div className="formulario-pie">
-            <button type="button" className="boton-admin" onClick={cerrarDialogo} autoFocus>Cancelar</button>
-            <button type="button" className="boton-admin boton-admin--peligro" onClick={confirmarEliminacion}>Eliminar</button>
+          <div className="admin-area" ref={areaRef}>
+            <header className="admin-topbar">
+              <div className="admin-topbar__titulo">
+                <button ref={menuRef} className="boton-icono menu-abrir" type="button" aria-controls="admin-sidebar" aria-expanded={sidebarAbierta} aria-label="Abrir menú" onClick={() => setSidebarAbierta(true)}>
+                  <Menu aria-hidden="true" />
+                </button>
+                <span>Tienda Mudra / {titulo}</span>
+              </div>
+              <div className="admin-identidad">
+                <span className="avatar">{(sesion.nombre || "M").slice(0, 1).toUpperCase()}</span>
+                <div><strong>{sesion.nombre}</strong><small>{sesion.rol}</small></div>
+              </div>
+            </header>
+            <main className="admin-contenido" id="admin-contenido">
+              <div id="aviso-admin" className={`aviso aviso--${aviso?.tipo || "exito"}`} role="status" hidden={!aviso}>{aviso?.texto}</div>
+              <div id="admin-vista"><Outlet /></div>
+            </main>
           </div>
-        </dialog>
-      </div>
-    </AdminContext.Provider>
+
+          <dialog ref={dialogo} id="confirmar-eliminacion" aria-labelledby="titulo-eliminacion" onClose={alCerrarDialogo}>
+            <h2 id="titulo-eliminacion">Eliminar {pendiente?.tipo}</h2>
+            <p id="texto-eliminacion">
+              {registroPendiente ? `Se eliminará "${registroPendiente.nombre}". Esta acción no se puede deshacer. Las órdenes anteriores conservarán sus datos.` : ""}
+            </p>
+            <div className="formulario-pie">
+              <button type="button" className="boton-admin" onClick={cerrarDialogo} autoFocus>Cancelar</button>
+              <button type="button" className="boton-admin boton-admin--peligro" onClick={confirmarEliminacion}>Eliminar</button>
+            </div>
+          </dialog>
+        </div>
+      </AdminContext.Provider>
   );
 }
-
-

@@ -28,9 +28,9 @@ export default function IniciarSesion() {
       const r = iniciarSesion(f.valores.correo, f.valores.contrasena);
       if (r.error) { setEstado({ texto: r.error, tipo: "error" }); return; }
       const rol = r.usuario.rol;
-      navegar(destino === "carrito" ? "/carrito#pagar"
-        : rol === "Administrador" ? "/admin"
-        : rol === "Vendedor" ? "/admin/productos" : "/");
+      navegar(destino === "carrito" ? "/checkout"
+          : rol === "Administrador" ? "/admin"
+              : rol === "Vendedor" ? "/admin/productos" : "/");
     } catch {
       setEstado({ texto: "No fue posible iniciar sesión. Inténtalo nuevamente.", tipo: "error" });
     } finally {
@@ -39,26 +39,26 @@ export default function IniciarSesion() {
   };
 
   return (
-    <main className="contenedor cuenta-contenedor">
-      <div className="cuenta-layout">
-        <section className="cuenta-intro" aria-labelledby="titulo-inicio-sesion">
-          <p className="cuenta-intro__etiqueta">Cuenta de cliente</p>
-          <h1 id="titulo-inicio-sesion">Inicia sesión</h1>
-          <p>Accede con el correo y contraseña de tu cuenta.</p>
-          <p className="cuenta-intro__enlace">¿Aún no tienes cuenta? <Link to={conDestino("/registro", destino)}>Regístrate</Link></p>
-        </section>
-        <form className="cuenta-formulario" onSubmit={enviar} noValidate>
-          <div className="cuenta-formulario__encabezado"><h2>Ingreso de cliente</h2></div>
-          <p className={`estado-formulario estado-formulario--${estado.tipo}`} role="status" hidden={!estado.texto}>{estado.texto}</p>
-          <Campo id="correo" etiqueta="Correo electrónico" error={f.errores.correo}>
-            <input type="email" maxLength={100} autoComplete="email" {...f.propsCampo("correo")} />
-          </Campo>
-          <Campo id="contrasena" etiqueta="Contraseña" error={f.errores.contrasena}>
-            <input type="password" minLength={4} maxLength={10} autoComplete="current-password" {...f.propsCampo("contrasena")} />
-          </Campo>
-          <button className="boton cuenta-formulario__accion" type="submit" disabled={enviando}>Ingresar</button>
-        </form>
-      </div>
-    </main>
+      <main className="contenedor cuenta-contenedor">
+        <div className="cuenta-layout">
+          <section className="cuenta-intro" aria-labelledby="titulo-inicio-sesion">
+            <p className="cuenta-intro__etiqueta">Cuenta de cliente</p>
+            <h1 id="titulo-inicio-sesion">Inicia sesión</h1>
+            <p>Accede con el correo y contraseña de tu cuenta.</p>
+            <p className="cuenta-intro__enlace">¿Aún no tienes cuenta? <Link to={conDestino("/registro", destino)}>Regístrate</Link></p>
+          </section>
+          <form className="cuenta-formulario" onSubmit={enviar} noValidate>
+            <div className="cuenta-formulario__encabezado"><h2>Ingreso de cliente</h2></div>
+            <p className={`estado-formulario estado-formulario--${estado.tipo}`} role="status" hidden={!estado.texto}>{estado.texto}</p>
+            <Campo id="correo" etiqueta="Correo electrónico" error={f.errores.correo}>
+              <input type="email" maxLength={100} autoComplete="email" {...f.propsCampo("correo")} />
+            </Campo>
+            <Campo id="contrasena" etiqueta="Contraseña" error={f.errores.contrasena}>
+              <input type="password" minLength={4} maxLength={10} autoComplete="current-password" {...f.propsCampo("contrasena")} />
+            </Campo>
+            <button className="boton cuenta-formulario__accion" type="submit" disabled={enviando}>Ingresar</button>
+          </form>
+        </div>
+      </main>
   );
 }

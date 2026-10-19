@@ -1,3 +1,4 @@
+// Categorías iniciales; luego se administran desde el panel (se guardan en localStorage).
 export const categoriasProductos = ["Polerones", "Pantalones", "Accesorios", "Poleras", "Calzado", "Chaquetas"];
 
 export const regionesData = [
@@ -32,6 +33,7 @@ export const productosIniciales = [
   },
   {
     "id": "URB002",
+    "precioOferta": 27990,
     "nombre": "Pantalón Oversize",
     "precio": 34990,
     "stock": 8,
@@ -54,6 +56,7 @@ export const productosIniciales = [
   },
   {
     "id": "URB004",
+    "precioOferta": 14990,
     "nombre": "Polera Urbana",
     "precio": 18990,
     "stock": 20,
@@ -76,6 +79,7 @@ export const productosIniciales = [
   },
   {
     "id": "URB006",
+    "precioOferta": 34990,
     "nombre": "Chaqueta Mezclilla Urbana",
     "precio": 42990,
     "stock": 6,
@@ -98,6 +102,7 @@ export const productosIniciales = [
   },
   {
     "id": "URB008",
+    "precioOferta": 26990,
     "nombre": "Polerón Oversize",
     "precio": 32990,
     "stock": 9,
