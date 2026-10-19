@@ -1,6 +1,6 @@
 // Capa de persistencia sobre localStorage. Usa las mismas claves que la versión
 // HTML/JS original, por lo que los datos ya guardados siguen funcionando.
-import { productosIniciales } from "../data/datos";
+import { productosIniciales, categoriasProductos } from "../data/datos";
 
 export const CLAVE_PRODUCTOS = "mudraProductos";
 export const CLAVE_ORDENES = "mudraOrdenes";
@@ -9,6 +9,7 @@ export const CLAVE_USUARIOS = "usuariosRegistrados";
 export const CLAVE_SESION = "sesionUsuario";
 export const CLAVE_CUENTAS_DEMO = "mudraCuentasDemoV2";
 export const CLAVE_MENSAJES_CONTACTO = "mudraMensajesContacto";
+export const CLAVE_CATEGORIAS = "mudraCategorias";
 
 export const CUENTAS_DEMOSTRACION = [
   {
@@ -53,7 +54,20 @@ export function obtenerOrdenes() {
   }
 }
 
-export function registrarOrden(cliente, carrito) {
+/** Precio vigente de un producto: el de oferta si existe y es menor al normal. */
+export function precioFinal(producto) {
+  const oferta = producto.precioOferta;
+  return Number.isFinite(oferta) && oferta !== null && oferta >= 0 && oferta < producto.precio ? oferta : producto.precio;
+}
+
+export const enOferta = (producto) => precioFinal(producto) < producto.precio;
+
+/**
+ * Registra una orden a partir del carrito y los datos del checkout.
+ * `datos` = { nombre, apellidos, correo, calle, departamento, region, comuna, indicaciones }.
+ * Si `exito` es false (pago rechazado) la orden queda como "Pago rechazado", sin descontar stock.
+ */
+export function registrarOrden(datos, carrito, exito = true) {
   const productos = obtenerProductos();
   if (!carrito.length) throw new Error("El carrito está vacío.");
   const cantidades = new Map();
@@ -66,20 +80,26 @@ export function registrarOrden(cliente, carrito) {
     if (!producto || cant > producto.stock) {
       throw new Error(`Revisa la disponibilidad de ${producto?.nombre || id}.`);
     }
-    return { id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cant, img: producto.img };
+    return { id: producto.id, nombre: producto.nombre, precio: precioFinal(producto), cantidad: cant, img: producto.img };
   });
+  const direccion = datos.departamento ? `${datos.calle}, ${datos.departamento}` : datos.calle;
   const orden = {
     id: `MUD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
     fecha: new Date().toISOString(),
-    estado: "Registrada",
+    estado: exito ? "Pagada" : "Pago rechazado",
     cliente: {
-      nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo,
-      direccion: cliente.direccion, comuna: cliente.comuna, region: cliente.region
+      nombre: datos.nombre, apellidos: datos.apellidos, correo: datos.correo,
+      direccion, comuna: datos.comuna, region: datos.region, indicaciones: datos.indicaciones || ""
     },
     items,
     total: items.reduce((total, item) => total + item.precio * item.cantidad, 0)
   };
   if (!Number.isFinite(orden.total)) throw new Error("El total de la compra excede el límite numérico.");
+
+  if (!exito) {
+    localStorage.setItem(CLAVE_ORDENES, JSON.stringify([orden, ...obtenerOrdenes()]));
+    return orden;
+  }
 
   // Se conserva el inventario anterior para recuperar una escritura incompleta.
   const inventarioAnterior = localStorage.getItem(CLAVE_PRODUCTOS);
@@ -97,11 +117,32 @@ export function registrarOrden(cliente, carrito) {
   return orden;
 }
 
+/* ---------- Categorías ---------- */
+export function crearSlug(texto) {
+  return texto.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+export function obtenerCategorias() {
+  try {
+    const guardado = localStorage.getItem(CLAVE_CATEGORIAS);
+    if (guardado === null) return categoriasProductos.map((nombre) => ({ id: crearSlug(nombre), nombre }));
+    const datos = JSON.parse(guardado);
+    return Array.isArray(datos) ? datos : [];
+  } catch {
+    return categoriasProductos.map((nombre) => ({ id: crearSlug(nombre), nombre }));
+  }
+}
+
+export function guardarCategorias(categorias) {
+  localStorage.setItem(CLAVE_CATEGORIAS, JSON.stringify(categorias));
+}
+
 /* ---------- Usuarios ---------- */
 function instalarCuentasDemostracion(usuarios) {
   if (localStorage.getItem(CLAVE_CUENTAS_DEMO) === "1") return usuarios;
   const nuevas = CUENTAS_DEMOSTRACION.filter((cuenta) => !usuarios.some((u) =>
-    u.run === cuenta.run || u.correo?.toLowerCase() === cuenta.correo));
+      u.run === cuenta.run || u.correo?.toLowerCase() === cuenta.correo));
   const cuentas = [...usuarios, ...nuevas];
   try {
     localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(cuentas));
@@ -159,8 +200,8 @@ export function obtenerCarrito() {
     const carrito = JSON.parse(localStorage.getItem(CLAVE_CARRITO));
     if (!Array.isArray(carrito)) return [];
     return carrito
-      .filter((item) => item && typeof item.id === "string" && Number(item.cant) > 0)
-      .map((item) => ({ id: item.id, cant: Number.parseInt(item.cant, 10) }));
+        .filter((item) => item && typeof item.id === "string" && Number(item.cant) > 0)
+        .map((item) => ({ id: item.id, cant: Number.parseInt(item.cant, 10) }));
   } catch {
     return [];
   }

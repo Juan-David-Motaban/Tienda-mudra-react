@@ -58,3 +58,30 @@ Cuentas de demostración (las mismas de antes): `admin@duoc.cl` / `Admin123` y `
   una nueva se conserva la actual.
 - `estilo.css` tenía un comentario HTML (`<!-- -->`) dentro de una declaración CSS; se eliminó.
 - La comuna se reinicia al cambiar de región en el registro.
+
+## Evaluación 2: vistas y funciones añadidas
+
+**Tienda**
+| Ruta | Qué hace |
+|---|---|
+| `/categorias`, `/categorias/:id` | Tarjetas de categorías y productos agrupados; una categoría por separado. |
+| `/ofertas` | Productos con precio de oferta. |
+| `/productos` | Ahora con búsqueda, filtro por categoría y orden (los filtros quedan en la URL). El buscador del header lleva aquí. |
+| `/carrito` | Cantidades editables (+/−), eliminar, limpiar. Se puede comprar como invitado. |
+| `/checkout` | Datos del cliente y dirección de entrega (se rellenan solos si hay sesión). Pago **simulado**: eliges "aprobado" o "rechazado". |
+| `/compra/exitosa/:id` | Resumen y boleta; imprimir (PDF desde el navegador) y envío por email simulado. |
+| `/compra/error/:id` | Pago rechazado, con "Volver a realizar el pago" (conserva los datos y el carrito). |
+
+**Administración**
+| Ruta | Qué hace |
+|---|---|
+| `/admin` | Resumen con productos, unidades, stock bajo, órdenes, ventas y usuarios. |
+| `/admin/categorias` (+ `/nueva`, `/:id/editar`) | CRUD de categorías. No deja eliminar una categoría con productos; al renombrarla actualiza sus productos. |
+| `/admin/productos/criticos` | Productos agotados o bajo su stock crítico. |
+| `/admin/reportes` | Ventas totales, por categoría y por producto, e inventario crítico. |
+| `/admin/perfil` | Cada usuario edita sus datos y contraseña. |
+| `/admin/ordenes/:id` | Boleta imprimible. |
+| `/admin/usuarios/:run` | Historial de compras del usuario (por correo). |
+
+Los productos tienen un campo nuevo, **precio de oferta** (opcional, debe ser menor al precio normal).
+Una orden con pago rechazado se guarda como "Pago rechazado" y no descuenta stock.

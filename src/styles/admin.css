@@ -208,3 +208,18 @@ dialog .formulario-pie { padding-top: 16px; margin-top: 20px; }
 @media (prefers-reduced-motion: reduce) {
   .admin-sidebar { transition: none; }
 }
+
+/* Boleta (detalle de orden imprimible) */
+.boleta { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; }
+.boleta__datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 20px; margin: 0 0 18px; }
+.boleta__datos dt { font-size: 12px; text-transform: uppercase; color: var(--secundario); }
+.boleta__datos dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.boleta__tabla { width: 100%; border-collapse: collapse; }
+.boleta__tabla th, .boleta__tabla td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.boleta__tabla .numero { text-align: right; }
+.boleta__tabla img { object-fit: cover; border-radius: 4px; }
+.boleta__total { margin: 16px 0 0; text-align: right; font-size: 18px; font-weight: 700; }
+@media print {
+  .admin-sidebar, .sidebar-fondo, .admin-topbar, .encabezado-acciones, .saltar-contenido, #aviso-admin { display: none !important; }
+  .admin-area { margin: 0 !important; }
+}
