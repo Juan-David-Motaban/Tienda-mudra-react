@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as db from "../lib/almacen";
-import { erroresProducto, erroresUsuario } from "../lib/validaciones";
+import { erroresCategoria, erroresPerfil, erroresProducto, erroresUsuario } from "../lib/validaciones";
 
 const TiendaContext = createContext(null);
 
@@ -12,6 +12,7 @@ export function useTienda() {
 
 const leerTodo = () => ({
   productos: db.obtenerProductos(),
+  categorias: db.obtenerCategorias(),
   ordenes: db.obtenerOrdenes(),
   usuarios: db.obtenerUsuarios(),
   sesion: db.obtenerSesion(),
@@ -19,7 +20,7 @@ const leerTodo = () => ({
 });
 
 const CLAVES_OBSERVADAS = [
-  db.CLAVE_PRODUCTOS, db.CLAVE_ORDENES, db.CLAVE_USUARIOS, db.CLAVE_SESION, db.CLAVE_CARRITO
+  db.CLAVE_PRODUCTOS, db.CLAVE_CATEGORIAS, db.CLAVE_ORDENES, db.CLAVE_USUARIOS, db.CLAVE_SESION, db.CLAVE_CARRITO
 ];
 
 export function TiendaProvider({ children }) {
@@ -38,18 +39,18 @@ export function TiendaProvider({ children }) {
     return () => window.removeEventListener("storage", alCambiar);
   }, [sincronizar]);
 
-  const { productos, ordenes, usuarios, sesion, carrito } = datos;
+  const { productos, categorias, ordenes, usuarios, sesion, carrito } = datos;
 
   /* ---------- Carrito ---------- */
   const resumenCarrito = useMemo(() => carrito
-    .map((item) => {
-      const producto = productos.find((p) => p.id === item.id);
-      return producto ? { ...item, producto } : null;
-    })
-    .filter(Boolean), [carrito, productos]);
+      .map((item) => {
+        const producto = productos.find((p) => p.id === item.id);
+        return producto ? { ...item, producto } : null;
+      })
+      .filter(Boolean), [carrito, productos]);
 
   const totalItems = carrito.reduce((t, i) => t + i.cant, 0);
-  const totalCarrito = resumenCarrito.reduce((t, i) => t + i.producto.precio * i.cant, 0);
+  const totalCarrito = resumenCarrito.reduce((t, i) => t + db.precioFinal(i.producto) * i.cant, 0);
 
   const agregarAlCarrito = useCallback((idProducto, cantidad = 1) => {
     const producto = productos.find((p) => p.id === idProducto);
@@ -80,13 +81,35 @@ export function TiendaProvider({ children }) {
     sincronizar();
   }, [sincronizar]);
 
-  const finalizarCompra = useCallback(() => {
-    if (!sesion) throw new Error("Inicia sesión para finalizar la compra.");
-    const orden = db.registrarOrden(sesion, db.obtenerCarrito());
+  /** Cambia la cantidad de un producto del carrito (respetando el stock disponible). */
+  const cambiarCantidad = useCallback((idProducto, cantidad) => {
+    const producto = db.obtenerProductos().find((p) => p.id === idProducto);
+    const unidades = Math.floor(Number(cantidad));
+    if (!producto || !Number.isSafeInteger(unidades)) return { ok: false };
+    if (unidades < 1) {
+      db.guardarCarrito(db.obtenerCarrito().filter((i) => i.id !== idProducto));
+      sincronizar();
+      return { ok: true };
+    }
+    if (unidades > producto.stock) return { ok: false, mensaje: `Stock disponible de ${producto.nombre}: ${producto.stock} unidades.` };
+    db.guardarCarrito(db.obtenerCarrito().map((i) => (i.id === idProducto ? { ...i, cant: unidades } : i)));
+    sincronizar();
+    return { ok: true };
+  }, [sincronizar]);
+
+  const vaciarCarrito = useCallback(() => {
     db.guardarCarrito([]);
     sincronizar();
+  }, [sincronizar]);
+
+  /** Registra la compra con los datos del checkout. `exito=false` simula un pago rechazado:
+   *  se guarda la orden como "Pago rechazado", no se descuenta stock y el carrito se conserva. */
+  const finalizarCompra = useCallback((datosCheckout, exito = true) => {
+    const orden = db.registrarOrden(datosCheckout, db.obtenerCarrito(), exito);
+    if (exito) db.guardarCarrito([]);
+    sincronizar();
     return orden;
-  }, [sesion, sincronizar]);
+  }, [sincronizar]);
 
   /* ---------- Sesión ---------- */
   const iniciarSesion = useCallback((correo, contrasena, soloAdministracion = false) => {
@@ -135,14 +158,16 @@ export function TiendaProvider({ children }) {
   const guardarProducto = useCallback((d, idActual = null) => {
     exigirAdministrador();
     const lista = db.obtenerProductos();
-    const errores = erroresProducto(d, lista, idActual);
+    const errores = erroresProducto(d, lista, db.obtenerCategorias().map((c) => c.nombre), idActual);
     if (Object.keys(errores).length) return { errores };
     const indice = lista.findIndex((p) => p.id === idActual);
     if (idActual && indice < 0) throw new Error("El producto ya no existe.");
     const producto = {
       id: idActual || d.id.trim().toUpperCase(), nombre: d.nombre.trim(),
       descripcion: d.descripcion.trim(), categoria: d.categoria,
-      precio: Number(d.precio), stock: Number(d.stock),
+      precio: Number(d.precio),
+      precioOferta: d.precioOferta === "" || d.precioOferta == null ? null : Number(d.precioOferta),
+      stock: Number(d.stock),
       stockCritico: d.stockCritico === "" ? null : Number(d.stockCritico),
       material: d.material.trim(), img: db.imagenProductoSegura(d.img.trim())
     };
@@ -199,14 +224,73 @@ export function TiendaProvider({ children }) {
     sincronizar();
   }, [sincronizar]);
 
+  /* ---------- Categorías ---------- */
+  const guardarCategoria = useCallback((d, idActual = null) => {
+    exigirAdministrador();
+    const lista = db.obtenerCategorias();
+    const errores = erroresCategoria(d, lista, idActual);
+    if (Object.keys(errores).length) return { errores };
+    const nombre = d.nombre.trim();
+    if (idActual) {
+      const indice = lista.findIndex((c) => c.id === idActual);
+      if (indice < 0) throw new Error("La categoría ya no existe.");
+      const anterior = lista[indice].nombre;
+      lista[indice] = { ...lista[indice], nombre };
+      // Los productos referencian la categoría por nombre: se actualizan al renombrarla.
+      if (anterior !== nombre) {
+        db.guardarProductos(db.obtenerProductos().map((p) => (p.categoria === anterior ? { ...p, categoria: nombre } : p)));
+      }
+    } else {
+      let id = db.crearSlug(nombre) || "categoria";
+      while (lista.some((c) => c.id === id)) id += "-2";
+      lista.push({ id, nombre });
+    }
+    db.guardarCategorias(lista);
+    sincronizar();
+    return { ok: true };
+  }, [sincronizar]);
+
+  const eliminarCategoria = useCallback((id) => {
+    exigirAdministrador();
+    const lista = db.obtenerCategorias();
+    const categoria = lista.find((c) => c.id === id);
+    if (!categoria) return;
+    const enUso = db.obtenerProductos().filter((p) => p.categoria === categoria.nombre).length;
+    if (enUso) throw new Error(`No se puede eliminar: ${enUso} producto(s) usan la categoría "${categoria.nombre}".`);
+    db.guardarCategorias(lista.filter((c) => c.id !== id));
+    sincronizar();
+  }, [sincronizar]);
+
+  /** Edición del propio perfil (cualquier rol con sesión). */
+  const actualizarPerfil = useCallback((d) => {
+    const actual = db.obtenerSesion();
+    if (!actual) throw new Error("Inicia sesión para editar tu perfil.");
+    const errores = erroresPerfil(d);
+    if (Object.keys(errores).length) return { errores };
+    const lista = db.obtenerUsuarios();
+    const indice = lista.findIndex((u) => u.run === actual.run);
+    if (indice < 0) throw new Error("El usuario ya no existe.");
+    const usuario = {
+      ...lista[indice], nombre: d.nombre.trim(), apellidos: d.apellidos.trim(),
+      fechaNacimiento: d.fechaNacimiento, region: d.region, comuna: d.comuna, direccion: d.direccion.trim(),
+      contrasena: d.contrasena || lista[indice].contrasena
+    };
+    lista[indice] = usuario;
+    db.guardarUsuarios(lista);
+    db.guardarSesion(usuario);
+    sincronizar();
+    return { ok: true };
+  }, [sincronizar]);
+
   const valor = {
-    productos, ordenes, usuarios, sesion, carrito,
+    productos, categorias, ordenes, usuarios, sesion, carrito,
     resumenCarrito, totalItems, totalCarrito,
     carritoAbierto, setCarritoAbierto, mensajeCarrito, setMensajeCarrito,
-    agregarAlCarrito, quitarDelCarrito, finalizarCompra,
+    agregarAlCarrito, quitarDelCarrito, cambiarCantidad, vaciarCarrito, finalizarCompra,
     iniciarSesion, cerrarSesion, registrarCliente,
     esAdministrador, hayAdministrador,
-    guardarProducto, eliminarProducto, guardarUsuario, eliminarUsuario
+    guardarProducto, eliminarProducto, guardarUsuario, eliminarUsuario,
+    guardarCategoria, eliminarCategoria, actualizarPerfil
   };
 
   return <TiendaContext.Provider value={valor}>{children}</TiendaContext.Provider>;
