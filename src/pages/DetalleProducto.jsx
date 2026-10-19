@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTienda } from "../context/TiendaContext";
-import { formatearPrecio, imagenProductoSegura } from "../lib/almacen";
+import PrecioProducto from "../components/PrecioProducto";
+import { imagenProductoSegura } from "../lib/almacen";
 import { useTituloPagina } from "../lib/hooks";
 
 export default function DetalleProducto() {
@@ -19,24 +20,26 @@ export default function DetalleProducto() {
   };
 
   return (
-    <main className="contenedor">
-      <h2>{prod ? prod.nombre : "Producto no disponible"}</h2>
-      {prod && url && <><img src={url} alt={prod.nombre} width="200" /><br /></>}
-      <p><strong>Precio:</strong> ${prod ? formatearPrecio(prod.precio) : "—"}</p>
-      <p>{prod ? prod.descripcion || "Sin descripción." : "Este producto ya no está en el catálogo."}</p>
-      {prod && <p>{prod.stock} unidades disponibles</p>}
-      <form onSubmit={(e) => e.preventDefault()}>
-        <div className="campo">
-          <label htmlFor="p-cant">Cantidad:</label>
-          <input
-            type="number" id="p-cant" name="cantidad" min="1" max={prod?.stock}
-            value={cantidad} disabled={noDisponible} onChange={(e) => setCantidad(e.target.value)}
-          />
-        </div>
-        <button type="button" className="boton btn-agregar" disabled={noDisponible} onClick={agregar}>
-          {noDisponible ? "No disponible" : "Agregar al carrito"}
-        </button>
-      </form>
-    </main>
+      <main className="contenedor">
+        <section className="detalle-producto">
+          <h2>{prod ? prod.nombre : "Producto no disponible"}</h2>
+          {prod && url && <><img src={url} alt={prod.nombre} width="200" /><br /></>}
+          <p><strong>Precio:</strong> {prod ? <PrecioProducto producto={prod} /> : "—"}</p>
+          <p>{prod ? prod.descripcion || "Sin descripción." : "Este producto ya no está en el catálogo."}</p>
+          {prod && <p>{prod.stock} unidades disponibles</p>}
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className="campo">
+              <label htmlFor="p-cant">Cantidad:</label>
+              <input
+                  type="number" id="p-cant" name="cantidad" min="1" max={prod?.stock}
+                  value={cantidad} disabled={noDisponible} onChange={(e) => setCantidad(e.target.value)}
+              />
+            </div>
+            <button type="button" className="boton btn-agregar" disabled={noDisponible} onClick={agregar}>
+              {noDisponible ? "No disponible" : "Agregar al carrito"}
+            </button>
+          </form>
+        </section>
+      </main>
   );
 }

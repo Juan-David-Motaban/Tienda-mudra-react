@@ -83,3 +83,10 @@
     body { background: #fff !important; }
     .resultado { border: none; box-shadow: none; background: #fff; }
 }
+
+
+/* Tarjetas blancas para contenido que quedaba suelto sobre la imagen de fondo */
+.categoria-seccion { background: #fff; border: 2px solid #000; border-radius: 4px; padding: 18px; box-shadow: 3px 3px 0 #000; }
+.grid-productos > p { grid-column: 1 / -1; margin: 0; padding: 14px 18px; background: #fff; border: 2px solid #000; border-radius: 4px; }
+.detalle-producto { max-width: 720px; margin: 0 auto; padding: 24px; background: #fff; border: 2px solid #000; border-radius: 4px; box-shadow: 3px 3px 0 #000; }
+.estado-compra { background: #fff; border: 2px solid #000; border-radius: 4px; padding: 18px; margin-bottom: 16px; }
