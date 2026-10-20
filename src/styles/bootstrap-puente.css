@@ -1,0 +1,26 @@
+/* Puente Bootstrap ↔ estilos propios.
+   Bootstrap se carga primero (main.jsx). Este archivo se inyecta antes de estilo.css / admin.css y solo
+   restaura el aspecto original donde el "reboot" de Bootstrap lo cambia (tipografía base, márgenes de títulos,
+   fieldset/legend, enlaces). Las reglas de estilo.css y admin.css, que vienen después, tienen la última palabra. */
+
+body { line-height: normal; font-size: 16px; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: bold; line-height: normal; }
+h1 { font-size: 2em; margin: .67em 0; }
+h2 { font-size: 1.5em; margin: .83em 0; }
+h3 { font-size: 1.17em; margin: 1em 0; }
+h4 { font-size: 1em; margin: 1.33em 0; }
+h5 { font-size: .83em; margin: 1.67em 0; }
+h6 { font-size: .67em; margin: 2.33em 0; }
+p { margin-top: 1em; margin-bottom: 1em; }
+dd { margin-left: 0; margin-bottom: 0; }
+fieldset { min-width: 0; margin: 0; }
+legend { float: none; width: auto; font-size: inherit; line-height: inherit; margin-bottom: 0; }
+a { text-underline-offset: auto; }
+
+/* Controles de Bootstrap dentro de los componentes propios */
+.btn-close, .navbar-toggler { box-shadow: none; }
+.navbar-toggler:active, .btn-close:active { transform: none; box-shadow: none; }
+.form-label { font-weight: inherit; }
+.form-select { padding-right: 2.25rem; }
+.table { margin-bottom: 0; }
