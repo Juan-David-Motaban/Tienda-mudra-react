@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { TiendaProvider } from "./context/TiendaContext";
 import TiendaLayout from "./components/TiendaLayout";
 import AdminLayout from "./components/admin/AdminLayout";
-
 import Home from "./pages/Home";
 import Productos from "./pages/Productos";
 import DetalleProducto from "./pages/DetalleProducto";
@@ -16,7 +15,6 @@ import Categorias from "./pages/Categorias";
 import Ofertas from "./pages/Ofertas";
 import Checkout from "./pages/Checkout";
 import ResultadoCompra from "./pages/ResultadoCompra";
-
 import AdminLogin from "./pages/admin/AdminLogin";
 import Resumen from "./pages/admin/Resumen";
 import Listado from "./pages/admin/Listado";
@@ -26,7 +24,6 @@ import FormUsuario from "./pages/admin/FormUsuario";
 import CategoriasAdmin from "./pages/admin/Categorias";
 import FormCategoria from "./pages/admin/FormCategoria";
 import Reportes from "./pages/admin/Reportes";
-import Perfil from "./pages/admin/Perfil";
 
 export default function App() {
   return (
