@@ -24,6 +24,7 @@ import FormUsuario from "./pages/admin/FormUsuario";
 import CategoriasAdmin from "./pages/admin/Categorias";
 import FormCategoria from "./pages/admin/FormCategoria";
 import Reportes from "./pages/admin/Reportes";
+import Perfil from "./pages/admin/Perfil";
 
 export default function App() {
   return (
