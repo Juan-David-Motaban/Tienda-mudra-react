@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Campo from "../components/Campo";
+import { guardarMensajeContacto } from "../lib/almacen";
 import { erroresContacto } from "../lib/validaciones";
 import { useFormulario } from "../lib/useFormulario";
 import { useTituloPagina } from "../lib/hooks";
@@ -11,11 +12,18 @@ export default function Contacto() {
   const f = useFormulario(VACIO, erroresContacto);
   const [estado, setEstado] = useState({ texto: "", tipo: "exito" });
 
+  const enviar = (e) => {
     e.preventDefault();
     setEstado({ texto: "", tipo: "exito" });
     const form = e.currentTarget;
     if (!f.validarTodo(form)) return;
     try {
+      guardarMensajeContacto({
+        id: Date.now(),
+        fecha: new Date().toISOString(),
+        nombre: f.valores.nombre.trim(),
+        correo: f.valores.correo.trim(),
+        comentario: f.valores.comentario.trim()
       });
       f.setValores(VACIO);
       f.setErrores({});
@@ -27,30 +35,30 @@ export default function Contacto() {
   };
 
   return (
-      <main className="contenedor contacto-pagina">
-        <div className="row g-4 g-lg-5 align-items-start">
-          <section className="contacto-intro col-12 col-lg-6" aria-labelledby="titulo-contacto">
-            <p className="cuenta-intro__etiqueta">Contacto</p>
-            <h1 id="titulo-contacto">Hablemos de tu próxima prenda</h1>
-            <p>Escríbenos tus dudas, sugerencias o consultas sobre productos. Nuestro equipo registrará tu mensaje para revisarlo.</p>
-          </section>
-          <div className="col-12 col-lg-6">
-            <form className="contacto-formulario" onSubmit={enviar} noValidate>
-              <h2>Envía tu mensaje</h2>
-              <p className={`estado-formulario estado-formulario--${estado.tipo}`} role="status" hidden={!estado.texto}>{estado.texto}</p>
-              <Campo id="nombre" etiqueta="Nombre completo" error={f.errores.nombre}>
-                <input type="text" maxLength={100} autoComplete="name" required {...f.propsCampo("nombre")} />
-              </Campo>
-              <Campo id="correo" etiqueta="Correo electrónico" error={f.errores.correo}>
-                <input type="email" maxLength={100} autoComplete="email" required {...f.propsCampo("correo")} />
-              </Campo>
-              <Campo id="comentario" etiqueta="Comentario" error={f.errores.comentario}>
-                <textarea rows={6} maxLength={500} required {...f.propsCampo("comentario")} />
-              </Campo>
-              <button type="submit" className="boton">Enviar mensaje</button>
-            </form>
-          </div>
+    <main className="contenedor contacto-pagina">
+      <div className="row g-4 g-lg-5 align-items-start">
+        <section className="contacto-intro col-12 col-lg-6" aria-labelledby="titulo-contacto">
+          <p className="cuenta-intro__etiqueta">Contacto</p>
+          <h1 id="titulo-contacto">Hablemos de tu próxima prenda</h1>
+          <p>Escríbenos tus dudas, sugerencias o consultas sobre productos. Nuestro equipo registrará tu mensaje para revisarlo.</p>
+        </section>
+        <div className="col-12 col-lg-6">
+          <form className="contacto-formulario" onSubmit={enviar} noValidate>
+            <h2>Envía tu mensaje</h2>
+            <p className={`estado-formulario estado-formulario--${estado.tipo}`} role="status" hidden={!estado.texto}>{estado.texto}</p>
+            <Campo id="nombre" etiqueta="Nombre completo" error={f.errores.nombre}>
+              <input type="text" maxLength={100} autoComplete="name" required {...f.propsCampo("nombre")} />
+            </Campo>
+            <Campo id="correo" etiqueta="Correo electrónico" error={f.errores.correo}>
+              <input type="email" maxLength={100} autoComplete="email" required {...f.propsCampo("correo")} />
+            </Campo>
+            <Campo id="comentario" etiqueta="Comentario" error={f.errores.comentario}>
+              <textarea rows={6} maxLength={500} required {...f.propsCampo("comentario")} />
+            </Campo>
+            <button type="submit" className="boton">Enviar mensaje</button>
+          </form>
         </div>
-      </main>
+      </div>
+    </main>
   );
 }
