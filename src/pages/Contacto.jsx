@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Campo from "../components/Campo";
+import { apiFetch } from "../lib/api";
 import { erroresContacto } from "../lib/validaciones";
 import { useFormulario } from "../lib/useFormulario";
 import { useTituloPagina } from "../lib/hooks";
@@ -11,11 +12,19 @@ export default function Contacto() {
   const f = useFormulario(VACIO, erroresContacto);
   const [estado, setEstado] = useState({ texto: "", tipo: "exito" });
 
+  const enviar = async (e) => {
     e.preventDefault();
     setEstado({ texto: "", tipo: "exito" });
     const form = e.currentTarget;
     if (!f.validarTodo(form)) return;
     try {
+      await apiFetch("/contacto", {
+        method: "POST",
+        body: JSON.stringify({
+          nombre: f.valores.nombre.trim(),
+          correo: f.valores.correo.trim(),
+          mensaje: f.valores.comentario.trim()
+        })
       });
       f.setValores(VACIO);
       f.setErrores({});

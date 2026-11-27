@@ -10,6 +10,10 @@ export function guardarToken(token) {
     else localStorage.removeItem(CLAVE_TOKEN);
 }
 
+export function limpiarToken() {
+    guardarToken(null);
+}
+
 export async function apiFetch(endpoint, options = {}) {
     const token = obtenerToken();
     const headers = {

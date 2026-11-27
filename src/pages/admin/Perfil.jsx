@@ -12,10 +12,20 @@ export default function Perfil() {
   const { sesion, actualizarPerfil } = useTienda();
   const { notificar } = useAdmin();
   const [guardando, setGuardando] = useState(false);
-  const f = useFormulario({
-    nombre: sesion.nombre || "", apellidos: sesion.apellidos || "", fechaNacimiento: sesion.fechaNacimiento || "",
-    contrasena: "", region: sesion.region || "", comuna: sesion.comuna || "", direccion: sesion.direccion || ""
-  }, erroresPerfil);
+
+  const f = useFormulario(
+      {
+        nombre: sesion?.nombre || "",
+        apellidos: sesion?.apellidos || "",
+        fechaNacimiento: sesion?.fechaNacimiento || "",
+        contrasena: "",
+        region: sesion?.region || "",
+        comuna: sesion?.comuna || "",
+        direccion: sesion?.direccion || ""
+      },
+      erroresPerfil
+  );
+
   const comunas = regionesData.find((r) => r.region === f.valores.region)?.comunas || [];
 
   const propsRegion = f.propsCampo("region");
@@ -26,62 +36,102 @@ export default function Perfil() {
     f.cambiar({ region: e.target.value, comuna: "" });
   };
 
-  const enviar = (e) => {
+  const enviar = async (e) => {
     e.preventDefault();
     if (guardando || !f.validarTodo(e.currentTarget)) return;
     setGuardando(true);
     try {
-      const r = actualizarPerfil(f.valores);
-      if (r.errores) { f.setErrores(r.errores); return; }
+      if (typeof actualizarPerfil !== "function") {
+        notificar("Actualización de perfil no disponible en este momento.", "error");
+        return;
+      }
+      const r = await actualizarPerfil(f.valores);
+      if (r?.errores) {
+        f.setErrores(r.errores);
+        return;
+      }
       f.cambiar({ contrasena: "" });
       notificar("Perfil actualizado correctamente.");
     } catch (error) {
-      notificar(error.message, "error");
+      notificar(error?.message || "No se pudo actualizar el perfil.", "error");
     } finally {
       setGuardando(false);
     }
   };
 
   return (
-    <>
-      <Cabecera titulo="Mi perfil" subtitulo={`${sesion.rol} · ${sesion.correo}`} />
-      <DatosDetalle pares={[["RUN", sesion.run], ["Correo", sesion.correo], ["Perfil", sesion.rol]]} />
-      <form className="formulario-admin" onSubmit={enviar} noValidate>
-        <fieldset>
-          <legend>Datos personales</legend>
-          <div className="row g-3">
-            <CampoAdmin col nombre="nombre" etiqueta="Nombre" error={f.errores.nombre}><input {...propsControl(f, "nombre")} required maxLength={50} /></CampoAdmin>
-            <CampoAdmin col nombre="apellidos" etiqueta="Apellidos" error={f.errores.apellidos}><input {...propsControl(f, "apellidos")} required maxLength={100} /></CampoAdmin>
-            <CampoAdmin col nombre="fechaNacimiento" etiqueta="Fecha de nacimiento" opcional error={f.errores.fechaNacimiento}><input {...propsControl(f, "fechaNacimiento")} type="date" /></CampoAdmin>
-            <CampoAdmin col nombre="contrasena" etiqueta="Nueva contraseña" opcional error={f.errores.contrasena}>
-              <input {...propsControl(f, "contrasena")} type="password" maxLength={10} autoComplete="new-password" placeholder="Conservar contraseña actual" />
-            </CampoAdmin>
+      <>
+        <Cabecera titulo="Mi perfil" subtitulo={`${sesion?.rol || ""} · ${sesion?.correo || ""}`} />
+        <DatosDetalle
+            pares={[
+              ["RUN", sesion?.run || "—"],
+              ["Correo", sesion?.correo || "—"],
+              ["Perfil", sesion?.rol || "—"]
+            ]}
+        />
+        <form className="formulario-admin" onSubmit={enviar} noValidate>
+          <fieldset>
+            <legend>Datos personales</legend>
+            <div className="row g-3">
+              <CampoAdmin col nombre="nombre" etiqueta="Nombre" error={f.errores.nombre}>
+                <input {...propsControl(f, "nombre")} required maxLength={50} />
+              </CampoAdmin>
+              <CampoAdmin col nombre="apellidos" etiqueta="Apellidos" error={f.errores.apellidos}>
+                <input {...propsControl(f, "apellidos")} required maxLength={100} />
+              </CampoAdmin>
+              <CampoAdmin col nombre="fechaNacimiento" etiqueta="Fecha de nacimiento" opcional error={f.errores.fechaNacimiento}>
+                <input {...propsControl(f, "fechaNacimiento")} type="date" />
+              </CampoAdmin>
+              <CampoAdmin col nombre="contrasena" etiqueta="Nueva contraseña" opcional error={f.errores.contrasena}>
+                <input
+                    {...propsControl(f, "contrasena")}
+                    type="password"
+                    maxLength={10}
+                    autoComplete="new-password"
+                    placeholder="Conservar contraseña actual"
+                />
+              </CampoAdmin>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Dirección</legend>
+            <div className="row g-3">
+              <CampoAdmin col nombre="region" etiqueta="Región" error={f.errores.region}>
+                <select {...propsControl(f, "region", { className: "control form-select" })} required onChange={cambiarRegion}>
+                  <option value="">Seleccionar</option>
+                  {regionesData.map((r) => (
+                      <option key={r.region} value={r.region}>
+                        {r.region}
+                      </option>
+                  ))}
+                </select>
+              </CampoAdmin>
+              <CampoAdmin col nombre="comuna" etiqueta="Comuna" error={f.errores.comuna}>
+                <select
+                    {...propsControl(f, "comuna", { className: "control form-select" })}
+                    required
+                    disabled={!f.valores.region}
+                >
+                  <option value="">Seleccionar</option>
+                  {comunas.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                  ))}
+                </select>
+              </CampoAdmin>
+              <CampoAdmin col nombre="direccion" etiqueta="Dirección" ancho error={f.errores.direccion}>
+                <textarea {...propsControl(f, "direccion")} rows={3} maxLength={300} required />
+              </CampoAdmin>
+            </div>
+          </fieldset>
+          <div className="formulario-pie">
+            <button type="submit" className="boton-admin boton-admin--primario" disabled={guardando}>
+              <Save aria-hidden="true" />
+              Guardar cambios
+            </button>
           </div>
-        </fieldset>
-        <fieldset>
-          <legend>Dirección</legend>
-          <div className="row g-3">
-            <CampoAdmin col nombre="region" etiqueta="Región" error={f.errores.region}>
-              <select {...propsControl(f, "region", { className: "control form-select" })} required onChange={cambiarRegion}>
-                <option value="">Seleccionar</option>
-                {regionesData.map((r) => <option key={r.region} value={r.region}>{r.region}</option>)}
-              </select>
-            </CampoAdmin>
-            <CampoAdmin col nombre="comuna" etiqueta="Comuna" error={f.errores.comuna}>
-              <select {...propsControl(f, "comuna", { className: "control form-select" })} required disabled={!f.valores.region}>
-                <option value="">Seleccionar</option>
-                {comunas.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </CampoAdmin>
-            <CampoAdmin col nombre="direccion" etiqueta="Dirección" ancho error={f.errores.direccion}>
-              <textarea {...propsControl(f, "direccion")} rows={3} maxLength={300} required />
-            </CampoAdmin>
-          </div>
-        </fieldset>
-        <div className="formulario-pie">
-          <button type="submit" className="boton-admin boton-admin--primario" disabled={guardando}><Save aria-hidden="true" />Guardar cambios</button>
-        </div>
-      </form>
-    </>
+        </form>
+      </>
   );
 }
